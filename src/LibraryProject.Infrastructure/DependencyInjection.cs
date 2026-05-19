@@ -1,4 +1,7 @@
+using LibraryProject.Application.Authentication;
+using LibraryProject.Application.Repositories;
 using LibraryProject.Infrastructure.Persistence;
+using LibraryProject.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +16,10 @@ public static class DependencyInjection
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is missing.");
 
         services.AddDbContext<LibraryDbContext>(options => options.UseSqlServer(connectionString));
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IUnitOfWork>(serviceProvider => serviceProvider.GetRequiredService<LibraryDbContext>());
+        services.AddScoped<IUserPasswordHasher, AspNetUserPasswordHasher>();
+        services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
         return services;
     }

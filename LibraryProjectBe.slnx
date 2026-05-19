@@ -1,5 +1,8 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/LibraryProject.Domain/LibraryProject.Domain.csproj" />
+    <Project Path="src/LibraryProject.Application/LibraryProject.Application.csproj" />
+    <Project Path="src/LibraryProject.Infrastructure/LibraryProject.Infrastructure.csproj" />
     <Project Path="src/LibraryProject.Api/LibraryProject.Api.csproj" />
   </Folder>
   <Folder Name="/tests/" />

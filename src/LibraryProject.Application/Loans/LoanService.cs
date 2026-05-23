@@ -1,11 +1,8 @@
 using LibraryProject.Application.Common;
-using LibraryProject.Application.Common.Exceptions;
 using LibraryProject.Application.Common.Pagination;
 using LibraryProject.Application.Repositories;
 using LibraryProject.Application.Loans.Exceptions;
-using LibraryProject.Domain.Common;
 using LibraryProject.Domain.Entities;
-using LibraryProject.Domain.Enums;
 
 namespace LibraryProject.Application.Loans;
 
@@ -48,18 +45,7 @@ internal sealed class LoanService(
         if (loan.UserId != currentUserId && !IsLibrarianOrAdmin(currentUserRole))
             throw new LoanNotFoundException(id);
 
-        if (loan.Status is LoanStatus.Returned)
-            throw new DomainRuleViolationException(
-                new LibraryProject.Domain.Common.DomainValidationException(
-                    "LOAN_ALREADY_RETURNED",
-                    "Loan has already been returned.",
-                    nameof(loan.Status),
-                    "Cannot return a loan that is already returned."));
-
-        loan.ReturnDate = DateOnly.FromDateTime(DateTime.UtcNow);
-        loan.Status = LoanStatus.Returned;
-
-        loan.BookCopy.Status = BookCopyStatus.Available;
+        DomainOperation.Execute(() => loan.Return());
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }

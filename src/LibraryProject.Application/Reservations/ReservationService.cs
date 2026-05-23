@@ -5,7 +5,6 @@ using LibraryProject.Application.Repositories;
 using LibraryProject.Application.Reservations.Exceptions;
 using LibraryProject.Domain.Common;
 using LibraryProject.Domain.Entities;
-using LibraryProject.Domain.Enums;
 
 namespace LibraryProject.Application.Reservations;
 
@@ -85,17 +84,10 @@ internal sealed class ReservationService(
                     "All copies of this book are currently borrowed or unavailable."));
 
         DomainOperation.Execute(() => reservation.Fulfill());
+        DomainOperation.Execute(() => availableCopy.Borrow());
 
-        var loan = new Loan
-        {
-            UserId = reservation.UserId,
-            BookCopyId = availableCopy.Id,
-            ReservationId = reservation.Id,
-            LoanDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            Status = LoanStatus.Active
-        };
-
-        availableCopy.Status = BookCopyStatus.Borrowed;
+        var loan = DomainOperation.Execute(() =>
+            Loan.Create(reservation.UserId, availableCopy.Id, reservation.Id));
 
         loanRepository.Add(loan);
         await unitOfWork.SaveChangesAsync(cancellationToken);

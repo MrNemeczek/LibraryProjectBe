@@ -1,4 +1,5 @@
 using LibraryProject.Domain.Entities;
+using LibraryProject.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -13,25 +14,37 @@ internal sealed class BookConfiguration : IEntityTypeConfiguration<Book>
         builder.HasKey(book => book.Id);
 
         builder.Property(book => book.Title)
-            .HasMaxLength(200)
+            .HasMaxLength(Book.MaxTitleLength)
             .IsRequired();
 
         builder.Property(book => book.Author)
-            .HasMaxLength(200)
+            .HasMaxLength(Book.MaxAuthorLength)
             .IsRequired();
 
         builder.Property(book => book.Isbn)
-            .HasMaxLength(20)
+            .HasConversion(
+                isbn => isbn.Value,
+                value => Isbn.Create(value))
+            .HasMaxLength(Isbn.MaxLength)
             .IsRequired();
 
         builder.Property(book => book.Description)
-            .HasMaxLength(2000);
+            .HasMaxLength(Book.MaxDescriptionLength);
+
+        builder.Property(book => book.IsDeleted)
+            .HasDefaultValue(false)
+            .IsRequired();
+
+        builder.Property(book => book.DeletedAt);
 
         builder.HasIndex(book => book.Isbn)
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("[IsDeleted] = 0");
 
         builder.HasIndex(book => book.Title);
         builder.HasIndex(book => book.Author);
+
+        builder.HasQueryFilter(book => !book.IsDeleted);
 
         builder.HasOne(book => book.Category)
             .WithMany(category => category.Books)

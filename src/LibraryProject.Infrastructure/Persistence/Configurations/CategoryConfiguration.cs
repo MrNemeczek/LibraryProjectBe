@@ -13,7 +13,7 @@ internal sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.HasKey(category => category.Id);
 
         builder.Property(category => category.Name)
-            .HasMaxLength(100)
+            .HasMaxLength(Category.MaxNameLength)
             .IsRequired();
 
         builder.HasIndex(category => category.Name)

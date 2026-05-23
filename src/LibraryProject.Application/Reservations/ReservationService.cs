@@ -1,7 +1,9 @@
 using LibraryProject.Application.Common;
+using LibraryProject.Application.Common.Exceptions;
 using LibraryProject.Application.Common.Pagination;
 using LibraryProject.Application.Repositories;
 using LibraryProject.Application.Reservations.Exceptions;
+using LibraryProject.Domain.Common;
 using LibraryProject.Domain.Entities;
 
 namespace LibraryProject.Application.Reservations;
@@ -9,6 +11,8 @@ namespace LibraryProject.Application.Reservations;
 internal sealed class ReservationService(
     IReservationRepository reservationRepository,
     IBookRepository bookRepository,
+    IBookCopyRepository bookCopyRepository,
+    ILoanRepository loanRepository,
     IUnitOfWork unitOfWork) : IReservationService
 {
     public async Task<ReservationResponse> CreateAsync(CreateReservationRequest request, int userId, CancellationToken cancellationToken)
@@ -70,7 +74,22 @@ internal sealed class ReservationService(
     {
         var reservation = await GetExistingReservationAsync(id, cancellationToken);
 
+        var availableCopy = await bookCopyRepository.GetAvailableCopyAsync(reservation.BookId, cancellationToken);
+        if (availableCopy is null)
+            throw new DomainRuleViolationException(
+                new DomainValidationException(
+                    "NO_AVAILABLE_COPY",
+                    "No available copy for this book.",
+                    nameof(availableCopy),
+                    "All copies of this book are currently borrowed or unavailable."));
+
         DomainOperation.Execute(() => reservation.Fulfill());
+        DomainOperation.Execute(() => availableCopy.Borrow());
+
+        var loan = DomainOperation.Execute(() =>
+            Loan.Create(reservation.UserId, availableCopy.Id, reservation.Id));
+
+        loanRepository.Add(loan);
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 

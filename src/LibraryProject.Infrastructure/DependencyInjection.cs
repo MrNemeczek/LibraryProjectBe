@@ -18,8 +18,10 @@ public static class DependencyInjection
         services.AddDbContext<LibraryDbContext>(options => options.UseSqlServer(connectionString));
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IBookRepository, BookRepository>();
+        services.AddScoped<IBookCopyRepository, BookCopyRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IReservationRepository, ReservationRepository>();
+        services.AddScoped<ILoanRepository, LoanRepository>();
         services.AddScoped<IUnitOfWork>(serviceProvider => serviceProvider.GetRequiredService<LibraryDbContext>());
         services.AddScoped<IUserPasswordHasher, AspNetUserPasswordHasher>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();

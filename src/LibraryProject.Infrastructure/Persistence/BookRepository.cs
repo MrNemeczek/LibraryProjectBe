@@ -31,6 +31,13 @@ internal sealed class BookRepository(LibraryDbContext dbContext) : IBookReposito
             .SingleOrDefaultAsync(book => book.Id == id, cancellationToken);
     }
 
+    public Task<Book?> GetByIdWithCopiesAsync(int id, CancellationToken cancellationToken)
+    {
+        return dbContext.Books
+            .Include(book => book.Copies)
+            .SingleOrDefaultAsync(book => book.Id == id, cancellationToken);
+    }
+
     public Task<bool> ExistsByIsbnAsync(Isbn isbn, int? excludedBookId, CancellationToken cancellationToken)
     {
         var query = dbContext.Books.Where(book => book.Isbn == isbn);

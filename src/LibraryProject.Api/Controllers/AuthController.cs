@@ -3,9 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LibraryProject.Api.Controllers;
 
-[ApiController]
 [Route("api/[controller]")]
-public sealed class AuthController(IAuthenticationService authenticationService) : ControllerBase
+public sealed class AuthController(IAuthenticationService authenticationService) : ApiControllerBase
 {
     [HttpPost("register")]
     public async Task<ActionResult<AuthenticationResponse>> Register(RegisterRequest request, CancellationToken cancellationToken)

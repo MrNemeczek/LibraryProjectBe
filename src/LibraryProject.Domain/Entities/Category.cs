@@ -27,25 +27,6 @@ public sealed class Category
 
     public static string NormalizeName(string? name)
     {
-        var normalizedName = name?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(normalizedName))
-        {
-            throw new DomainValidationException(
-                "CATEGORY_NAME_REQUIRED",
-                "Category name is required.",
-                nameof(Name),
-                "Category name is required.");
-        }
-
-        if (normalizedName.Length > MaxNameLength)
-        {
-            throw new DomainValidationException(
-                "CATEGORY_NAME_TOO_LONG",
-                "Category name is too long.",
-                nameof(Name),
-                $"Category name cannot exceed {MaxNameLength} characters.");
-        }
-
-        return normalizedName;
+        return Guard.Required(name, nameof(Name), MaxNameLength, "CATEGORY");
     }
 }

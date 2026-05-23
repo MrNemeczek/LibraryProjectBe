@@ -6,9 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LibraryProject.Api.Controllers;
 
-[ApiController]
 [Route("api/[controller]")]
-public sealed class BooksController(IBookService bookService) : ControllerBase
+public sealed class BooksController(IBookService bookService) : ApiControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<PaginatedResponse<BookResponse>>> Get(

@@ -44,65 +44,17 @@ public sealed class Book
     public void Delete(DateTime deletedAt)
     {
         if (IsDeleted)
-        {
             return;
-        }
-
         IsDeleted = true;
         DeletedAt = deletedAt;
     }
 
     private void ApplyDetails(string? title, string? author, Isbn isbn, string? description, Category category)
     {
-        Title = NormalizeRequired(title, nameof(Title), MaxTitleLength);
-        Author = NormalizeRequired(author, nameof(Author), MaxAuthorLength);
-        Isbn = isbn ?? throw Required(nameof(Isbn));
-        Description = NormalizeOptional(description, nameof(Description), MaxDescriptionLength);
-        Category = category ?? throw Required(nameof(Category));
-    }
-
-    private static string NormalizeRequired(string? value, string fieldName, int maxLength)
-    {
-        var normalizedValue = value?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(normalizedValue))
-        {
-            throw Required(fieldName);
-        }
-
-        if (normalizedValue.Length > maxLength)
-        {
-            throw TooLong(fieldName, maxLength);
-        }
-
-        return normalizedValue;
-    }
-
-    private static string NormalizeOptional(string? value, string fieldName, int maxLength)
-    {
-        var normalizedValue = value?.Trim() ?? string.Empty;
-        if (normalizedValue.Length > maxLength)
-        {
-            throw TooLong(fieldName, maxLength);
-        }
-
-        return normalizedValue;
-    }
-
-    private static DomainValidationException Required(string fieldName)
-    {
-        return new DomainValidationException(
-            $"BOOK_{fieldName.ToUpperInvariant()}_REQUIRED",
-            $"{fieldName} is required.",
-            fieldName,
-            $"{fieldName} is required.");
-    }
-
-    private static DomainValidationException TooLong(string fieldName, int maxLength)
-    {
-        return new DomainValidationException(
-            $"BOOK_{fieldName.ToUpperInvariant()}_TOO_LONG",
-            $"{fieldName} is too long.",
-            fieldName,
-            $"{fieldName} cannot exceed {maxLength} characters.");
+        Title = Guard.Required(title, nameof(Title), MaxTitleLength, "BOOK");
+        Author = Guard.Required(author, nameof(Author), MaxAuthorLength, "BOOK");
+        Isbn = isbn ?? throw Guard.RequiredError(nameof(Isbn), "BOOK");
+        Description = Guard.Optional(description, nameof(Description), MaxDescriptionLength, "BOOK");
+        Category = category ?? throw Guard.RequiredError(nameof(Category), "BOOK");
     }
 }

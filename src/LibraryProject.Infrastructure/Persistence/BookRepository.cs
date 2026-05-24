@@ -11,6 +11,7 @@ internal sealed class BookRepository(LibraryDbContext dbContext) : IBookReposito
     {
         return await dbContext.Books
             .Include(book => book.Category)
+            .Include(book => book.Copies)
             .AsNoTracking()
             .OrderBy(book => book.Title)
             .ThenBy(book => book.Id)
@@ -28,6 +29,7 @@ internal sealed class BookRepository(LibraryDbContext dbContext) : IBookReposito
     {
         return dbContext.Books
             .Include(book => book.Category)
+            .Include(book => book.Copies)
             .SingleOrDefaultAsync(book => book.Id == id, cancellationToken);
     }
 

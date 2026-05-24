@@ -23,6 +23,15 @@ internal sealed class ReservationService(
         if (activeExists)
             throw new ActiveReservationAlreadyExistsException(userId, request.BookId);
 
+        var availableCopy = await bookCopyRepository.GetAvailableCopyAsync(request.BookId, cancellationToken);
+        if (availableCopy is null)
+            throw new DomainRuleViolationException(
+                new DomainValidationException(
+                    "NO_AVAILABLE_COPY_FOR_RESERVATION",
+                    "No available copy of this book for reservation.",
+                    nameof(request.BookId),
+                    "All copies of this book are currently borrowed or unavailable."));
+
         var reservation = DomainOperation.Execute(() =>
             Reservation.Create(userId, request.BookId, request.PickupDeadlineDays ?? Reservation.DefaultPickupDeadlineDays));
 

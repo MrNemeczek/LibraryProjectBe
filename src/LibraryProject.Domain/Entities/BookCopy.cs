@@ -5,13 +5,29 @@ namespace LibraryProject.Domain.Entities;
 
 public sealed class BookCopy
 {
-    public int Id { get; set; }
-    public int BookId { get; set; }
-    public string InventoryNumber { get; set; } = string.Empty;
+    public const int MaxInventoryNumberLength = 50;
+
+    private BookCopy()
+    {
+    }
+
+    private BookCopy(string inventoryNumber)
+    {
+        InventoryNumber = Guard.Required(inventoryNumber, nameof(InventoryNumber), MaxInventoryNumberLength, "BOOKCOPY");
+    }
+
+    public int Id { get; private set; }
+    public int BookId { get; private set; }
+    public string InventoryNumber { get; private set; } = string.Empty;
     public BookCopyStatus Status { get; private set; } = BookCopyStatus.Available;
 
-    public Book Book { get; set; } = null!;
-    public ICollection<Loan> Loans { get; set; } = new List<Loan>();
+    public Book Book { get; private set; } = null!;
+    public ICollection<Loan> Loans { get; private set; } = new List<Loan>();
+
+    public static BookCopy Create(string inventoryNumber)
+    {
+        return new BookCopy(inventoryNumber);
+    }
 
     public void Borrow()
     {

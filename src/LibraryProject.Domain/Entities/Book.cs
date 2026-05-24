@@ -41,6 +41,21 @@ public sealed class Book
         ApplyDetails(title, author, isbn, description, category);
     }
 
+    public BookCopy AddCopy(string inventoryNumber)
+    {
+        var copy = BookCopy.Create(inventoryNumber);
+
+        if (Copies.Any(c => c.InventoryNumber == copy.InventoryNumber))
+            throw new DomainValidationException(
+                "BOOK_DUPLICATE_COPY_INVENTORY_NUMBER",
+                "A copy with this inventory number already exists.",
+                nameof(inventoryNumber),
+                $"A copy with inventory number '{inventoryNumber}' already exists for this book.");
+
+        Copies.Add(copy);
+        return copy;
+    }
+
     public void Delete(DateTime deletedAt)
     {
         if (IsDeleted)

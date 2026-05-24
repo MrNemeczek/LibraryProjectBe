@@ -7,4 +7,5 @@ public sealed record BookResponse(
     string Isbn,
     string Description,
     int CategoryId,
-    string CategoryName);
+    string CategoryName,
+    IReadOnlyList<BookCopyResponse> Copies);

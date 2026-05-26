@@ -29,6 +29,18 @@ public sealed class BookCopy
         return new BookCopy(inventoryNumber);
     }
 
+    public void Reserve()
+    {
+        if (Status != BookCopyStatus.Available)
+            throw new DomainValidationException(
+                "BOOKCOPY_NOT_AVAILABLE",
+                "Book copy is not available.",
+                nameof(Status),
+                $"Cannot reserve a copy with status '{Status}'.");
+        
+        Status = BookCopyStatus.Reserved;
+    }
+
     public void Borrow()
     {
         if (Status != BookCopyStatus.Available)
@@ -43,7 +55,7 @@ public sealed class BookCopy
 
     public void MakeAvailable()
     {
-        if (Status != BookCopyStatus.Borrowed)
+        if (Status != BookCopyStatus.Borrowed && Status != BookCopyStatus.Reserved)
             throw new DomainValidationException(
                 "BOOKCOPY_NOT_BORROWED",
                 "Book copy is not currently borrowed.",

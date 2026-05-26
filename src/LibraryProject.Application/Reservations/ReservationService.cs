@@ -35,6 +35,8 @@ internal sealed class ReservationService(
         var reservation = DomainOperation.Execute(() =>
             Reservation.Create(userId, request.BookId, request.PickupDeadlineDays ?? Reservation.DefaultPickupDeadlineDays));
 
+        DomainOperation.Execute(availableCopy.Reserve);
+
         reservationRepository.Add(reservation);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return MapToResponse(reservation, book.Title);
@@ -75,7 +77,20 @@ internal sealed class ReservationService(
         if (reservation.UserId != userId)
             throw new ReservationNotFoundException(id);
 
-        DomainOperation.Execute(() => reservation.Cancel());
+        var reservedCopy = await bookCopyRepository.GetReservedCopyAsync(reservation.BookId, cancellationToken);
+        if (reservedCopy is null)
+        {
+            throw new DomainRuleViolationException(
+                new DomainValidationException(
+                    "RESERVED_COPY_NOT_FOUND",
+                    "Reserved copy for this reservation not found.",
+                    nameof(reservation.BookId),
+                    "The reserved copy associated with this reservation could not be found."));
+        }
+
+        DomainOperation.Execute(reservation.Cancel);
+        DomainOperation.Execute(reservedCopy.MakeAvailable);
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
@@ -106,7 +121,7 @@ internal sealed class ReservationService(
     {
         var book = await bookRepository.GetByIdAsync(id, cancellationToken);
         if (book is null)
-            throw new Exceptions.ReservationNotFoundException(id);
+            throw new ReservationNotFoundException(id);
         return book;
     }
 

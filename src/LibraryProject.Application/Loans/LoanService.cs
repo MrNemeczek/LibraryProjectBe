@@ -19,13 +19,13 @@ internal sealed class LoanService(
             loans.Select(MapToResponse).ToList(), page, pageSize, totalCount, totalPages);
     }
 
-    public async Task<PaginatedResponse<LoanResponse>> GetAllAsync(int page, int pageSize, CancellationToken cancellationToken)
+    public async Task<PaginatedResponse<LoanResponse>> GetAllAsync(GetLoansRequest request, CancellationToken cancellationToken)
     {
-        var totalCount = await loanRepository.CountAllAsync(cancellationToken);
-        var loans = await loanRepository.GetAllAsync(page, pageSize, cancellationToken);
-        var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
+        var totalCount = await loanRepository.CountAllAsync(request, cancellationToken);
+        var loans = await loanRepository.GetAllAsync(request, cancellationToken);
+        var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)request.PageSize);
         return new PaginatedResponse<LoanResponse>(
-            loans.Select(MapToResponse).ToList(), page, pageSize, totalCount, totalPages);
+            loans.Select(MapToResponse).ToList(), request.Page, request.PageSize, totalCount, totalPages);
     }
 
     public async Task<LoanResponse> GetByIdAsync(int id, int currentUserId, string currentUserRole, CancellationToken cancellationToken)
@@ -42,7 +42,7 @@ internal sealed class LoanService(
     {
         var loan = await GetExistingLoanAsync(id, cancellationToken);
 
-        if (loan.UserId != currentUserId && !IsLibrarianOrAdmin(currentUserRole))
+        if (!IsLibrarianOrAdmin(currentUserRole))
             throw new LoanNotFoundException(id);
 
         DomainOperation.Execute(() => loan.Return());
@@ -63,7 +63,10 @@ internal sealed class LoanService(
         return new LoanResponse(
             loan.Id,
             loan.UserId,
+            loan.User.FirstName,
+            loan.User.LastName,
             loan.BookCopyId,
+            loan.BookCopy.InventoryNumber,
             loan.ReservationId,
             loan.LoanDate,
             loan.ReturnDate,

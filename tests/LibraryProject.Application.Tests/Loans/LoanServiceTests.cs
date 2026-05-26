@@ -23,9 +23,11 @@ public class LoanServiceTests
             var copy = BookCopy.Create("INV-001");
             copy.Borrow();
             var loan = Loan.Create(1, copy.Id, null);
+            var user = new User { Id = 1, FirstName = "Jan", LastName = "Kowalski" };
             typeof(Loan).GetProperty("Id")!.SetValue(loan, 1);
             typeof(Loan).GetProperty("UserId")!.SetValue(loan, 1);
             typeof(Loan).GetProperty("BookCopy")!.SetValue(loan, copy);
+            typeof(Loan).GetProperty("User")!.SetValue(loan, user);
             return loan;
         }));
 
@@ -70,10 +72,11 @@ public class LoanServiceTests
         public async Task Should_return_all_loans_paginated()
         {
             var loans = new List<Loan> { _fixture.Create<Loan>() };
-            _loanRepository.CountAllAsync(Arg.Any<CancellationToken>()).Returns(1);
-            _loanRepository.GetAllAsync(1, 20, Arg.Any<CancellationToken>()).Returns(loans);
+            var request = new GetLoansRequest { Page = 1, PageSize = 20 };
+            _loanRepository.CountAllAsync(request, Arg.Any<CancellationToken>()).Returns(1);
+            _loanRepository.GetAllAsync(request, Arg.Any<CancellationToken>()).Returns(loans);
 
-            var result = await _sut.GetAllAsync(1, 20, CancellationToken.None);
+            var result = await _sut.GetAllAsync(request, CancellationToken.None);
 
             result.Items.Should().HaveCount(1);
             result.TotalCount.Should().Be(1);
@@ -141,14 +144,14 @@ public class LoanServiceTests
     public class ReturnAsync : LoanServiceTests
     {
         [Fact]
-        public async Task Should_return_loan_when_user_owns_it()
+        public async Task Should_throw_when_reader_returns_own_loan()
         {
             var loan = _fixture.Create<Loan>();
             _loanRepository.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(loan);
 
-            await _sut.ReturnAsync(1, 1, "Reader", CancellationToken.None);
+            var act = () => _sut.ReturnAsync(1, 1, "Reader", CancellationToken.None);
 
-            await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+            await act.Should().ThrowAsync<LoanNotFoundException>();
         }
 
         [Fact]
@@ -158,6 +161,17 @@ public class LoanServiceTests
             _loanRepository.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(loan);
 
             await _sut.ReturnAsync(1, 99, "Librarian", CancellationToken.None);
+
+            await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task Should_return_loan_when_administrator_returns_for_user()
+        {
+            var loan = _fixture.Create<Loan>();
+            _loanRepository.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(loan);
+
+            await _sut.ReturnAsync(1, 99, "Administrator", CancellationToken.None);
 
             await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         }

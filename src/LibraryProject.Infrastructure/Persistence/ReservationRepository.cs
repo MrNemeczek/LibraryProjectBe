@@ -1,4 +1,5 @@
 using LibraryProject.Application.Repositories;
+using LibraryProject.Application.Reservations;
 using LibraryProject.Domain.Entities;
 using LibraryProject.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,7 @@ internal sealed class ReservationRepository(LibraryDbContext dbContext) : IReser
     {
         return await dbContext.Reservations
             .Include(r => r.Book)
+            .Include(r => r.User)
             .AsNoTracking()
             .Where(r => r.UserId == userId)
             .OrderByDescending(r => r.ReservationDate).ThenByDescending(r => r.Id)
@@ -21,22 +23,24 @@ internal sealed class ReservationRepository(LibraryDbContext dbContext) : IReser
     public Task<int> CountByUserIdAsync(int userId, CancellationToken cancellationToken)
         => dbContext.Reservations.CountAsync(r => r.UserId == userId, cancellationToken);
 
-    public async Task<IReadOnlyList<Reservation>> GetAllAsync(int page, int pageSize, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<Reservation>> GetAllAsync(GetReservationsRequest request, CancellationToken cancellationToken)
     {
-        return await dbContext.Reservations
+        return await CreateFilteredQuery(request)
             .Include(r => r.Book)
+            .Include(r => r.User)
             .AsNoTracking()
             .OrderByDescending(r => r.ReservationDate).ThenByDescending(r => r.Id)
-            .Skip((page - 1) * pageSize).Take(pageSize)
+            .Skip((request.Page - 1) * request.PageSize).Take(request.PageSize)
             .ToListAsync(cancellationToken);
     }
 
-    public Task<int> CountAllAsync(CancellationToken cancellationToken)
-        => dbContext.Reservations.CountAsync(cancellationToken);
+    public Task<int> CountAllAsync(GetReservationsRequest request, CancellationToken cancellationToken)
+        => CreateFilteredQuery(request).CountAsync(cancellationToken);
 
     public Task<Reservation?> GetByIdAsync(int id, CancellationToken cancellationToken)
         => dbContext.Reservations
             .Include(r => r.Book)
+            .Include(r => r.User)
             .SingleOrDefaultAsync(r => r.Id == id, cancellationToken);
 
     public Task<bool> ExistsActiveByUserAndBookAsync(int userId, int bookId, CancellationToken cancellationToken)
@@ -45,4 +49,25 @@ internal sealed class ReservationRepository(LibraryDbContext dbContext) : IReser
             cancellationToken);
 
     public void Add(Reservation reservation) => dbContext.Reservations.Add(reservation);
+
+    private IQueryable<Reservation> CreateFilteredQuery(GetReservationsRequest request)
+    {
+        var query = dbContext.Reservations.AsQueryable();
+
+        if (request.ReservationId is not null)
+        {
+            query = query.Where(reservation => reservation.Id == request.ReservationId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ReaderName))
+        {
+            var readerName = request.ReaderName.Trim();
+            query = query.Where(reservation =>
+                reservation.User.FirstName.Contains(readerName) ||
+                reservation.User.LastName.Contains(readerName) ||
+                (reservation.User.FirstName + " " + reservation.User.LastName).Contains(readerName));
+        }
+
+        return query;
+    }
 }

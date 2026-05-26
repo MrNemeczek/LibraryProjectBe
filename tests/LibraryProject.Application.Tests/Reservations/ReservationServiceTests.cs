@@ -13,6 +13,7 @@ public class ReservationServiceTests
 {
     protected readonly IFixture _fixture;
     protected readonly IReservationRepository _reservationRepository;
+    protected readonly IUserRepository _userRepository;
     protected readonly IBookRepository _bookRepository;
     protected readonly IBookCopyRepository _bookCopyRepository;
     protected readonly ILoanRepository _loanRepository;
@@ -43,17 +44,26 @@ public class ReservationServiceTests
                 Book.Create("Title", "Author",
                     Isbn.Create("978-3-16-148410-0"), null,
                     Category.Create("Fiction")));
+            typeof(Reservation).GetProperty("User")!.SetValue(reservation, new User
+            {
+                Id = 1,
+                FirstName = "Jan",
+                LastName = "Kowalski",
+                Email = "jan.kowalski@example.com",
+                Role = UserRole.Reader
+            });
             return reservation;
         }));
 
         _reservationRepository = Substitute.For<IReservationRepository>();
+        _userRepository = Substitute.For<IUserRepository>();
         _bookRepository = Substitute.For<IBookRepository>();
         _bookCopyRepository = Substitute.For<IBookCopyRepository>();
         _loanRepository = Substitute.For<ILoanRepository>();
         _unitOfWork = Substitute.For<IUnitOfWork>();
 
         _sut = new ReservationService(
-            _reservationRepository, _bookRepository, _bookCopyRepository,
+            _reservationRepository, _userRepository, _bookRepository, _bookCopyRepository,
             _loanRepository, _unitOfWork);
     }
 
@@ -71,10 +81,20 @@ public class ReservationServiceTests
                 1, request.BookId, Arg.Any<CancellationToken>()).Returns(false);
             _bookCopyRepository.GetAvailableCopyAsync(
                 request.BookId, Arg.Any<CancellationToken>()).Returns(availableCopy);
+            _userRepository.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(new User
+            {
+                Id = 1,
+                FirstName = "Jan",
+                LastName = "Kowalski",
+                Email = "jan.kowalski@example.com",
+                Role = UserRole.Reader
+            });
 
             var result = await _sut.CreateAsync(request, 1, CancellationToken.None);
 
             result.Should().NotBeNull();
+            result.ReaderFirstName.Should().Be("Jan");
+            result.ReaderLastName.Should().Be("Kowalski");
             _reservationRepository.Received(1).Add(Arg.Any<Reservation>());
             await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         }
@@ -215,11 +235,11 @@ public class ReservationServiceTests
         public async Task Should_return_all_reservations_paginated()
         {
             var reservations = new List<Reservation> { _fixture.Create<Reservation>() };
-            _reservationRepository.CountAllAsync(Arg.Any<CancellationToken>()).Returns(1);
-            _reservationRepository.GetAllAsync(1, 20, Arg.Any<CancellationToken>())
+            _reservationRepository.CountAllAsync(Arg.Any<GetReservationsRequest>(), Arg.Any<CancellationToken>()).Returns(1);
+            _reservationRepository.GetAllAsync(Arg.Any<GetReservationsRequest>(), Arg.Any<CancellationToken>())
                 .Returns(reservations);
 
-            var result = await _sut.GetAllAsync(1, 20, CancellationToken.None);
+            var result = await _sut.GetAllAsync(new GetReservationsRequest { Page = 1, PageSize = 20 }, CancellationToken.None);
 
             result.Items.Should().HaveCount(1);
             result.TotalCount.Should().Be(1);
@@ -232,11 +252,15 @@ public class ReservationServiceTests
         public async Task Should_cancel_reservation_when_user_owns_it()
         {
             var reservation = _fixture.Create<Reservation>();
+            var reservedCopy = BookCopy.Create("INV-001");
+            reservedCopy.Reserve();
             _reservationRepository.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(reservation);
+            _bookCopyRepository.GetReservedCopyAsync(reservation.BookId, Arg.Any<CancellationToken>()).Returns(reservedCopy);
 
             await _sut.CancelAsync(1, 1, CancellationToken.None);
 
             reservation.Status.Should().Be(ReservationStatus.Cancelled);
+            reservedCopy.Status.Should().Be(BookCopyStatus.Available);
             await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         }
 

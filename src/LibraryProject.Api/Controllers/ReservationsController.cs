@@ -36,7 +36,7 @@ public sealed class ReservationsController(IReservationService reservationServic
         [FromQuery] GetReservationsRequest request,
         CancellationToken cancellationToken = default)
     {
-        var response = await reservationService.GetAllAsync(request.Page, request.PageSize, cancellationToken);
+        var response = await reservationService.GetAllAsync(request, cancellationToken);
         return Ok(response);
     }
 

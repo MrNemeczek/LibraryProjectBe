@@ -2,7 +2,8 @@ namespace LibraryProject.Application.Reservations;
 
 public sealed record ReservationResponse(
     int Id,
-    int UserId,
+    string ReaderFirstName,
+    string ReaderLastName,
     int BookId,
     string BookTitle,
     DateOnly ReservationDate,

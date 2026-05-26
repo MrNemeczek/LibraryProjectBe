@@ -20,4 +20,10 @@ internal sealed class BookCopyRepository(LibraryDbContext dbContext) : IBookCopy
             .Select(c => c.InventoryNumber)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<BookCopy?> GetReservedCopyAsync(int bookId, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.BookCopies
+            .FirstOrDefaultAsync(c => c.BookId == bookId && c.Status == BookCopyStatus.Reserved, cancellationToken);
+    }
 }

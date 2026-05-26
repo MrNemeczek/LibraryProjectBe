@@ -10,6 +10,7 @@ namespace LibraryProject.Application.Reservations;
 
 internal sealed class ReservationService(
     IReservationRepository reservationRepository,
+    IUserRepository userRepository,
     IBookRepository bookRepository,
     IBookCopyRepository bookCopyRepository,
     ILoanRepository loanRepository,
@@ -35,9 +36,12 @@ internal sealed class ReservationService(
         var reservation = DomainOperation.Execute(() =>
             Reservation.Create(userId, request.BookId, request.PickupDeadlineDays ?? Reservation.DefaultPickupDeadlineDays));
 
+        DomainOperation.Execute(availableCopy.Reserve);
+
         reservationRepository.Add(reservation);
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        return MapToResponse(reservation, book.Title);
+        var user = await userRepository.GetByIdAsync(userId, cancellationToken);
+        return MapToResponse(reservation, book.Title, user?.FirstName ?? string.Empty, user?.LastName ?? string.Empty);
     }
 
     public async Task<ReservationResponse> GetByIdAsync(int id, int currentUserId, string currentUserRole, CancellationToken cancellationToken)
@@ -47,7 +51,7 @@ internal sealed class ReservationService(
         if (reservation.UserId != currentUserId && !IsLibrarianOrAdmin(currentUserRole))
             throw new ReservationNotFoundException(id);
 
-        return MapToResponse(reservation, reservation.Book.Title);
+        return MapToResponse(reservation);
     }
 
     public async Task<PaginatedResponse<ReservationResponse>> GetMyReservationsAsync(int userId, int page, int pageSize, CancellationToken cancellationToken)
@@ -56,16 +60,16 @@ internal sealed class ReservationService(
         var reservations = await reservationRepository.GetByUserIdAsync(userId, page, pageSize, cancellationToken);
         var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
         return new PaginatedResponse<ReservationResponse>(
-            reservations.Select(r => MapToResponse(r, r.Book.Title)).ToList(), page, pageSize, totalCount, totalPages);
+            reservations.Select(MapToResponse).ToList(), page, pageSize, totalCount, totalPages);
     }
 
-    public async Task<PaginatedResponse<ReservationResponse>> GetAllAsync(int page, int pageSize, CancellationToken cancellationToken)
+    public async Task<PaginatedResponse<ReservationResponse>> GetAllAsync(GetReservationsRequest request, CancellationToken cancellationToken)
     {
-        var totalCount = await reservationRepository.CountAllAsync(cancellationToken);
-        var reservations = await reservationRepository.GetAllAsync(page, pageSize, cancellationToken);
-        var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
+        var totalCount = await reservationRepository.CountAllAsync(request, cancellationToken);
+        var reservations = await reservationRepository.GetAllAsync(request, cancellationToken);
+        var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)request.PageSize);
         return new PaginatedResponse<ReservationResponse>(
-            reservations.Select(r => MapToResponse(r, r.Book.Title)).ToList(), page, pageSize, totalCount, totalPages);
+            reservations.Select(MapToResponse).ToList(), request.Page, request.PageSize, totalCount, totalPages);
     }
 
     public async Task CancelAsync(int id, int userId, CancellationToken cancellationToken)
@@ -75,7 +79,20 @@ internal sealed class ReservationService(
         if (reservation.UserId != userId)
             throw new ReservationNotFoundException(id);
 
-        DomainOperation.Execute(() => reservation.Cancel());
+        var reservedCopy = await bookCopyRepository.GetReservedCopyAsync(reservation.BookId, cancellationToken);
+        if (reservedCopy is null)
+        {
+            throw new DomainRuleViolationException(
+                new DomainValidationException(
+                    "RESERVED_COPY_NOT_FOUND",
+                    "Reserved copy for this reservation not found.",
+                    nameof(reservation.BookId),
+                    "The reserved copy associated with this reservation could not be found."));
+        }
+
+        DomainOperation.Execute(reservation.Cancel);
+        DomainOperation.Execute(reservedCopy.MakeAvailable);
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
@@ -106,7 +123,7 @@ internal sealed class ReservationService(
     {
         var book = await bookRepository.GetByIdAsync(id, cancellationToken);
         if (book is null)
-            throw new Exceptions.ReservationNotFoundException(id);
+            throw new ReservationNotFoundException(id);
         return book;
     }
 
@@ -118,11 +135,17 @@ internal sealed class ReservationService(
         return reservation;
     }
 
-    private static ReservationResponse MapToResponse(Reservation reservation, string bookTitle)
+    private static ReservationResponse MapToResponse(Reservation reservation)
+    {
+        return MapToResponse(reservation, reservation.Book.Title, reservation.User.FirstName, reservation.User.LastName);
+    }
+
+    private static ReservationResponse MapToResponse(Reservation reservation, string bookTitle, string readerFirstName, string readerLastName)
     {
         return new ReservationResponse(
             reservation.Id,
-            reservation.UserId,
+            readerFirstName,
+            readerLastName,
             reservation.BookId,
             bookTitle,
             reservation.ReservationDate,

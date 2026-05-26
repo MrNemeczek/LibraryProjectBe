@@ -26,7 +26,7 @@ public sealed class LoansController(ILoanService loanService) : ApiControllerBas
         [FromQuery] GetLoansRequest request,
         CancellationToken cancellationToken = default)
     {
-        var response = await loanService.GetAllAsync(request.Page, request.PageSize, cancellationToken);
+        var response = await loanService.GetAllAsync(request, cancellationToken);
         return Ok(response);
     }
 
@@ -40,7 +40,7 @@ public sealed class LoansController(ILoanService loanService) : ApiControllerBas
         return Ok(response);
     }
 
-    [Authorize]
+    [Authorize(Roles = ApplicationRoles.LibrarianOrAdministrator)]
     [HttpPut("{id:int}/return")]
     public async Task<IActionResult> Return(int id, CancellationToken cancellationToken)
     {

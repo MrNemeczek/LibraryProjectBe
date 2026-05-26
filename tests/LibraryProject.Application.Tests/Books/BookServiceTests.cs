@@ -52,10 +52,11 @@ public class BookServiceTests
         public async Task Should_return_paginated_books()
         {
             var books = new List<Book> { _fixture.Create<Book>() };
-            _bookRepository.CountAsync(Arg.Any<CancellationToken>()).Returns(1);
-            _bookRepository.GetAsync(1, 20, Arg.Any<CancellationToken>()).Returns(books);
+            var request = new GetBooksRequest { Page = 1, PageSize = 20 };
+            _bookRepository.CountAsync(request, Arg.Any<CancellationToken>()).Returns(1);
+            _bookRepository.GetAsync(request, Arg.Any<CancellationToken>()).Returns(books);
 
-            var result = await _sut.GetAsync(1, 20, CancellationToken.None);
+            var result = await _sut.GetAsync(request, CancellationToken.None);
 
             result.Items.Should().HaveCount(1);
             result.TotalCount.Should().Be(1);
@@ -66,15 +67,41 @@ public class BookServiceTests
         [Fact]
         public async Task Should_return_empty_when_no_books()
         {
-            _bookRepository.CountAsync(Arg.Any<CancellationToken>()).Returns(0);
-            _bookRepository.GetAsync(1, 20, Arg.Any<CancellationToken>())
+            var request = new GetBooksRequest { Page = 1, PageSize = 20 };
+            _bookRepository.CountAsync(request, Arg.Any<CancellationToken>()).Returns(0);
+            _bookRepository.GetAsync(request, Arg.Any<CancellationToken>())
                 .Returns(new List<Book>());
 
-            var result = await _sut.GetAsync(1, 20, CancellationToken.None);
+            var result = await _sut.GetAsync(request, CancellationToken.None);
 
             result.Items.Should().BeEmpty();
             result.TotalCount.Should().Be(0);
             result.TotalPages.Should().Be(0);
+        }
+
+        [Fact]
+        public async Task Should_pass_filters_to_repository()
+        {
+            var request = new GetBooksRequest
+            {
+                Page = 2,
+                PageSize = 10,
+                Title = "Dune",
+                Author = "Herbert",
+                CategoryId = 1,
+            };
+            _bookRepository.CountAsync(request, Arg.Any<CancellationToken>()).Returns(11);
+            _bookRepository.GetAsync(request, Arg.Any<CancellationToken>())
+                .Returns(new List<Book>());
+
+            var result = await _sut.GetAsync(request, CancellationToken.None);
+
+            result.Page.Should().Be(2);
+            result.PageSize.Should().Be(10);
+            result.TotalCount.Should().Be(11);
+            result.TotalPages.Should().Be(2);
+            await _bookRepository.Received(1).CountAsync(request, Arg.Any<CancellationToken>());
+            await _bookRepository.Received(1).GetAsync(request, Arg.Any<CancellationToken>());
         }
     }
 

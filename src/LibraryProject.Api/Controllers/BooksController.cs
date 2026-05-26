@@ -14,7 +14,7 @@ public sealed class BooksController(IBookService bookService) : ApiControllerBas
         [FromQuery] GetBooksRequest request,
         CancellationToken cancellationToken = default)
     {
-        var response = await bookService.GetAsync(request.Page, request.PageSize, cancellationToken);
+        var response = await bookService.GetAsync(request, cancellationToken);
 
         return Ok(response);
     }

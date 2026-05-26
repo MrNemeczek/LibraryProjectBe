@@ -15,13 +15,13 @@ internal sealed class BookService(
     ICategoryRepository categoryRepository,
     IUnitOfWork unitOfWork) : IBookService
 {
-    public async Task<PaginatedResponse<BookResponse>> GetAsync(int page, int pageSize, CancellationToken cancellationToken)
+    public async Task<PaginatedResponse<BookResponse>> GetAsync(GetBooksRequest request, CancellationToken cancellationToken)
     {
-        var totalCount = await bookRepository.CountAsync(cancellationToken);
-        var books = await bookRepository.GetAsync(page, pageSize, cancellationToken);
-        var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
+        var totalCount = await bookRepository.CountAsync(request, cancellationToken);
+        var books = await bookRepository.GetAsync(request, cancellationToken);
+        var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)request.PageSize);
         return new PaginatedResponse<BookResponse>(
-            books.Select(MapToResponse).ToList(), page, pageSize, totalCount, totalPages);
+            books.Select(MapToResponse).ToList(), request.Page, request.PageSize, totalCount, totalPages);
     }
 
     public async Task<BookResponse> GetByIdAsync(int id, CancellationToken cancellationToken)

@@ -1,11 +1,13 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/LibraryProject.Domain/LibraryProject.Domain.csproj" />
-    <Project Path="src/LibraryProject.Application/LibraryProject.Application.csproj" />
-    <Project Path="src/LibraryProject.Infrastructure/LibraryProject.Infrastructure.csproj" />
     <Project Path="src/LibraryProject.Api/LibraryProject.Api.csproj" />
+    <Project Path="src/LibraryProject.Application/LibraryProject.Application.csproj" />
+    <Project Path="src/LibraryProject.Domain/LibraryProject.Domain.csproj" />
+    <Project Path="src/LibraryProject.Infrastructure/LibraryProject.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/LibraryProject.Application.Tests/LibraryProject.Application.Tests.csproj" />
+    <Project Path="tests/LibraryProject.Application.Tests/LibraryProject.Application.Tests.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
   </Folder>
 </Solution>

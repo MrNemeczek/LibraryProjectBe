@@ -118,12 +118,11 @@ internal sealed class BookService(
 
     private async Task<Category> GetOrCreateCategoryAsync(string categoryName, CancellationToken cancellationToken)
     {
-        var normalizedName = DomainOperation.Execute(() => Category.NormalizeName(categoryName));
-        var category = await categoryRepository.GetByNameAsync(normalizedName, cancellationToken);
+        var category = await categoryRepository.GetByNameAsync(categoryName, cancellationToken);
         if (category is not null)
             return category;
 
-        category = DomainOperation.Execute(() => Category.Create(normalizedName));
+        category = DomainOperation.Execute(() => Category.Create(categoryName));
         categoryRepository.Add(category);
         return category;
     }

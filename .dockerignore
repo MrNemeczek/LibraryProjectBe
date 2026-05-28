@@ -1,0 +1,10 @@
+bin/
+obj/
+.git/
+.gitattributes
+.gitignore
+.vs/
+.vscode/
+.github/
+README.md
+docker-compose.yml

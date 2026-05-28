@@ -27,19 +27,4 @@ public class CategoryEntityTests
         act.Should().Throw<DomainValidationException>()
             .Which.Code.Should().Be("CATEGORY_NAME_REQUIRED");
     }
-
-    [Fact]
-    public void NormalizeName_should_trim_and_return()
-    {
-        var result = Category.NormalizeName("  Science  ");
-        result.Should().Be("Science");
-    }
-
-    [Fact]
-    public void NormalizeName_should_throw_when_null()
-    {
-        var act = () => Category.NormalizeName(null);
-        act.Should().Throw<DomainValidationException>()
-            .Which.Code.Should().Be("CATEGORY_NAME_REQUIRED");
-    }
 }

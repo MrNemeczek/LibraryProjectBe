@@ -22,10 +22,11 @@ public sealed class Category
 
     public static Category Create(string? name)
     {
+        name = NormalizeName(name);
         return new Category(name);
     }
 
-    public static string NormalizeName(string? name)
+    private static string NormalizeName(string? name)
     {
         return Guard.Required(name, nameof(Name), MaxNameLength, "CATEGORY");
     }
